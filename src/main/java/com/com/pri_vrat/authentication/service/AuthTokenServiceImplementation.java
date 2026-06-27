@@ -1,0 +1,141 @@
+package com.com.pri_vrat.authentication.service;
+
+import com.com.pri_vrat.authentication.config.RoleContext;
+import com.com.pri_vrat.authentication.config.TenantContext;
+import com.com.pri_vrat.authentication.config.WorkSpaceContext;
+import com.com.pri_vrat.authentication.dto.AppResponse;
+import com.com.pri_vrat.authentication.dto.Auth;
+import com.com.pri_vrat.authentication.entity.UserAuth;
+import com.com.pri_vrat.authentication.exception.customException.AuthenticationException;
+import com.com.pri_vrat.authentication.repository.AuthUserRepository;
+import com.com.pri_vrat.authentication.util.Constants;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
+import tools.jackson.databind.ObjectMapper;
+
+import java.util.*;
+
+@Slf4j
+@RequiredArgsConstructor
+@Service
+public class AuthTokenServiceImplementation implements AuthTokenService {
+
+    private final RestTemplate restTemplate;
+    private final MessageSource messageSource;
+    private final AuthUserRepository authRepo;
+
+    @Value("${docmanager.keycloak.token.endpoint}")
+    private String tokenEndPoint;
+
+    @Value("${docmanager.keycloak.client.secret}")
+    private String clientSecret;
+
+    @Value("${docmanager.keycloak.client.id}")
+    private String clientId;
+
+    @Value("${docmanager.keycloak.realm}")
+    private String realm;
+
+    @Override
+    public AppResponse login(Auth auth) {
+        AppResponse loginResponse = new AppResponse();
+        try {
+            List<UserAuth> userListByEmail = authRepo.findByUserPrimaryKey_Email(auth.getEmail());
+            if (userListByEmail.isEmpty()) {
+                throw new AuthenticationException(messageSource.getMessage("MESSAGE.AUTH.INVALID.EMAIL", null, Locale.ENGLISH));
+            } else if (!userListByEmail.getFirst().getUserPrimaryKey().getEmail().equals(auth.getEmail())) {
+                throw new AuthenticationException(messageSource.getMessage("MESSAGE.AUTH.INVALID.EMAIL", null, Locale.ENGLISH));
+            }
+            AppResponse response = getToken(auth);
+            if (!response.getCode().equals(Constants.RESPONSE_CODE.SUCCESS)) {
+                throw new AuthenticationException(messageSource.getMessage("MESSAGE.AUTH.INVALID.AUTH", null, Locale.ENGLISH));
+            }
+            JSONObject tokenResponse = response.getDetails().getFirst();
+            String token = tokenResponse.get("access_token").toString();
+            JSONObject parsedJwt = parseAuthToken(token);
+            RoleContext.currentRole.set(parsedJwt.get(Constants.KEYCLOAK.DOC_USER_TYPE).toString());
+            TenantContext.currentTenant.set(parsedJwt.get(Constants.KEYCLOAK.DOC_TENANT_ID).toString());
+            WorkSpaceContext.currentWorkSpace.set(parsedJwt.get(Constants.KEYCLOAK.DOC_WORK_SPACE).toString());
+            loginResponse.setCode(Constants.RESPONSE_CODE.SUCCESS);
+            loginResponse.setMessage(messageSource.getMessage("MESSAGE.AUTH.LOGIN.SUCCESS", null, Locale.ENGLISH));
+            tokenResponse.remove("scope");
+            loginResponse.setDetails(List.of(tokenResponse));
+            return loginResponse;
+        } catch (AuthenticationException e) {
+            log.info(e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.info("Exception occurred in auth token service at login...{}", e.getMessage());
+            throw e;
+        }
+    }
+
+    private AppResponse getToken(Auth auth) {
+        log.info("Entering into token service getToken()...");
+        AppResponse appResponse = new AppResponse();
+        try {
+            HttpEntity<?> requiredEntity = getHttpEntity(auth);
+            JSONObject response = restTemplate.exchange(tokenEndPoint, HttpMethod.POST, requiredEntity, JSONObject.class).getBody();
+            appResponse.setCode(Constants.RESPONSE_CODE.SUCCESS);
+            appResponse.setMessage("Successfully fetched");
+            assert response != null;
+            appResponse.setDetails(List.of(response));
+            return appResponse;
+        } catch (HttpClientErrorException | AuthenticationException ex) {
+            log.info(ex.getMessage());
+            throw ex;
+        } catch (Exception e) {
+            log.info("exception at getToken() method...{}", e.getMessage());
+            throw e;
+        }
+    }
+
+    private HttpEntity<?> getHttpEntity(Auth auth) {
+        MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
+        requestBody.add("client_id", clientId);
+        requestBody.add("realm", realm);
+        requestBody.add("client_secret", clientSecret);
+        requestBody.add("grant_type", Constants.KEYCLOAK.GRANT_TYPE);
+        requestBody.add("username", auth.getEmail());
+        requestBody.add("password", auth.getPassword());
+        HttpHeaders header = new HttpHeaders();
+        header.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        return new HttpEntity<>(requestBody, header);
+    }
+
+    private JSONObject parseAuthToken(String authToken) {
+        try {
+            assert authToken != null;
+            String[] tokenPartitions = authToken.split("\\.");
+            if (tokenPartitions.length != 3) {
+                throw new AuthenticationException(messageSource.getMessage("MESSAGE.AUTH.INVALID.TOKEN", null, Locale.ENGLISH));
+            }
+            Base64.Decoder decoder = Base64.getUrlDecoder();
+            String jwtHeader = new String(decoder.decode(tokenPartitions[0].toString()));
+            String jwtBody = new String(decoder.decode(tokenPartitions[1].toString()));
+
+            ObjectMapper mapper = new ObjectMapper();
+            JSONObject parsedHeader = mapper.readValue(jwtHeader, JSONObject.class);
+            JSONObject parseBody = mapper.readValue(jwtBody, JSONObject.class);
+            parseBody.put("header", parsedHeader);
+            return parseBody;
+        } catch (Exception e) {
+            log.info("Exception occurred in token parser..{}", e.getMessage());
+            throw e;
+        }
+    }
+}
