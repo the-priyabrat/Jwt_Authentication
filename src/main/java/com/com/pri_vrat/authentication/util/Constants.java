@@ -10,10 +10,10 @@ public class Constants {
     }
     public static class KEYCLOAK {
         public static String GRANT_TYPE = "password";
-        public static String DOC_WORK_SPACE = "DOC_WORK_SPACE";
-        public static String DOC_TENANT_ID = "DOC-TENANT-ID";
-        public static String DOC_USER_NAME = "DOC-USER-NAME";
-        public static String DOC_USER_TYPE = "DOC-USER-TYPE";
+        public static String LOG_APP_NAME = "LOG_APP_NAME";
+        public static String LOG_TENANT_ID = "LOG-TENANT-ID";
+        public static String LOG_USER_NAME = "LOG-USER-NAME";
+        public static String LOG_USER_TYPE = "LOG-USER-TYPE";
         public static String ACCOUNT_DISABLED= "Account disabled";
     }
     public static class RESPONSE_CODE {

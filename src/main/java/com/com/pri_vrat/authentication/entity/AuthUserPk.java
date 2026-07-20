@@ -14,5 +14,4 @@ import lombok.*;
 public class AuthUserPk {
     private String userName;
     private String email;
-    private String workspaceId;
 }

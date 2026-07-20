@@ -11,6 +11,7 @@ import com.com.pri_vrat.authentication.exception.customException.VerificationExc
 import com.com.pri_vrat.authentication.repository.AuthUserRepository;
 import com.com.pri_vrat.authentication.util.Constants;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,9 +53,7 @@ public class UserAuthServiceImplementation implements UserAuthService {
         AuthUserPk userPk = AuthUserPk.builder()
                 .userName(authDto.getUserName())
                 .email(authDto.getEmail())
-                .workspaceId(workSpaceId)
                 .build();
-        authDto.setWorkspaceId(workSpaceId);
         Optional<UserAuth> userOptional = authUserRepository.findById(userPk);
         if (userOptional.isPresent()) {
             throw new RegistrationException(messageSource.getMessage("MESSAGE.REGISTRATION.DUPLICATE.ID", null, Locale.ENGLISH));
@@ -87,7 +86,10 @@ public class UserAuthServiceImplementation implements UserAuthService {
             logger.info("Leave from user registration----!");
             return response;
         } catch (Exception e) {
-            rollBack(userId);
+            logger.info("Exception occurred in registerUser()...{} ", e.toString());
+            if (userId != null && userId.isEmpty()) {
+                rollBack(userId);
+            }
             logger.info("Exception occurred in registerUser()...{} ", e.toString());
             throw e;
         }
@@ -113,6 +115,9 @@ public class UserAuthServiceImplementation implements UserAuthService {
                 throw new VerificationException(messageSource.getMessage("MESSAGE.ACCOUNT.ALREADY.DELETED", null, Locale.ENGLISH));
             }
             List<UserRepresentation> keycloakUsers = keycloak.realm(realm).users().search(verificationDto.getEmail());
+            if (keycloakUsers.isEmpty()) {
+                throw new VerificationException(messageSource.getMessage("MESSAGE.ACCOUNT.DOES.NOT.EXISTS", null, Locale.ENGLISH));
+            }
             String userId = keycloakUsers.getFirst().getId();
             currentUserResource = keycloak.realm(realm).users().get(userId);
             UserRepresentation currentUserRepresentation = currentUserResource.toRepresentation();
@@ -140,7 +145,6 @@ public class UserAuthServiceImplementation implements UserAuthService {
                 .firstName(authDto.getFirstName())
                 .lastName(authDto.getLastName())
                 .dob(authDto.getDob())
-                .workSpaceSize(authDto.getWorkSpaceSize())
                 .status(Constants.STATUS.PENDING)
                 .userPrimaryKey(userPk)
                 .password(authDto.getPassword())
@@ -157,38 +161,40 @@ public class UserAuthServiceImplementation implements UserAuthService {
             userRepresentation.setLastName(authDto.getLastName());
             userRepresentation.setEmail(authDto.getEmail());
 
-            final String tenantId = authDto.getUserName().toUpperCase() + authDto.getWorkspaceId().toUpperCase().substring(0, 4);
+            final String tenantId = authDto.getUserName().toUpperCase() + "_" + authDto.getApplicationName().toUpperCase();
 
             Map<String, List<String>> attributes = new HashMap<>();
-            attributes.put("DOC-TENANT-ID", Collections.singletonList(tenantId));
-            attributes.put("DOC-USER-TYPE", Collections.singletonList(authDto.getUserType()));
-            attributes.put("DOC-USER-NAME", Collections.singletonList(authDto.getUserName()));
-            attributes.put("DOC_WORK_SPACE", Collections.singletonList(authDto.getWorkspaceId()));
+            attributes.put("LOG-TENANT-ID", Collections.singletonList(tenantId));
+            attributes.put("LOG-USER-TYPE", Collections.singletonList(authDto.getUserType()));
+            attributes.put("LOG-USER-NAME", Collections.singletonList(authDto.getUserName()));
+            attributes.put("LOG-APP-NAME", Collections.singletonList(authDto.getApplicationName()));
 
             CredentialRepresentation credential = new CredentialRepresentation();
             credential.setType("password");
             credential.setValue(authDto.getPassword());
             credential.setTemporary(false);
 
+
             userRepresentation.setAttributes(attributes);
             userRepresentation.setCredentials(Collections.singletonList(credential));
-
             Response response = keycloak.realm(realm).users().create(userRepresentation);
-
             if (response.getStatus() == 409) {
                 keycloakResponse.put("CODE", Constants.RESPONSE_CODE.FAILED);
-                keycloakResponse.put("MESSAGE", "User already exist");
+                keycloakResponse.put("MESSAGE", "User already exists..!");
             } else if (response.getStatus() == 201) {
                 String userId = CreatedResponseUtil.getCreatedId(response);
                 keycloakResponse.put("CODE", Constants.RESPONSE_CODE.SUCCESS);
                 keycloakResponse.put("MESSAGE", "User created");
                 keycloakResponse.put("USER_ID", userId);
+            } else {
+                keycloakResponse.put("CODE", Constants.RESPONSE_CODE.FAILED);
+                keycloakResponse.put("MESSAGE", response.getStatus());
             }
             logger.info("Leave from keycloak registration----!");
             return keycloakResponse;
         } catch (Exception e) {
             keycloakResponse.put("CODE", Constants.RESPONSE_CODE.FAILED);
-            keycloakResponse.put("MESSAGE", e.toString());
+            keycloakResponse.put("MESSAGE", "User creation failed");
             logger.info("Exception occurred at registerUserInKeycloak()...{}", e.toString());
         }
         return keycloakResponse;
@@ -203,7 +209,7 @@ public class UserAuthServiceImplementation implements UserAuthService {
             userAuth.setStatus(Constants.STATUS.PENDING);
             authUserRepository.save(userAuth);
         }
-        if (!userResource.equals(null)) {
+        if (userResource != null && !userResource.equals(null)) {
             UserRepresentation userRepresentation = userResource.toRepresentation();
             userRepresentation.setEnabled(false);
             userResource.update(userRepresentation);

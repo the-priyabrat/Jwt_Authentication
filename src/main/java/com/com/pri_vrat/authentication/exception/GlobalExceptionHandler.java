@@ -31,16 +31,17 @@ public class GlobalExceptionHandler {
 
     private final MessageSource messageSource;
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<AppResponse> ExceptionHandler(Exception e) {
-        log.info("Exception handler");
-        JSONObject exception = new JSONObject();
-        AppResponse exceptionResponse = new AppResponse();
-        exceptionResponse.setCode(Constants.RESPONSE_CODE.FAILED);
-        exceptionResponse.setMessage(messageSource.getMessage("MESSAGE.EXCEPTION.OCCURRED", null, Locale.ENGLISH));
-        exceptionResponse.setDetails(Collections.emptyList());
-        return new ResponseEntity<>(exceptionResponse, new HttpHeaders(), HttpStatus.OK);
-    }
+//    @ExceptionHandler(Exception.class)
+//    public ResponseEntity<AppResponse> ExceptionHandler(Exception e) {
+//        log.info("Exception handler");
+//        log.info("Failed for message {}",e.getMessage());
+//        JSONObject exception = new JSONObject();
+//        AppResponse exceptionResponse = new AppResponse();
+//        exceptionResponse.setCode(Constants.RESPONSE_CODE.FAILED);
+//        exceptionResponse.setMessage(messageSource.getMessage("MESSAGE.EXCEPTION.OCCURRED", null, Locale.ENGLISH));
+//        exceptionResponse.setDetails(Collections.emptyList());
+//        return new ResponseEntity<>(exceptionResponse, new HttpHeaders(), HttpStatus.OK);
+//    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<AppResponse> validationException(MethodArgumentNotValidException ex) {

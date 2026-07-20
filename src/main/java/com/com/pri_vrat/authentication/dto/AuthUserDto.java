@@ -24,12 +24,15 @@ public class AuthUserDto {
     @Email(message = "{MESSAGE.EMAIL.VALID.FORMAT}")
     private String email;
 
-    private String workspaceId;
-
     @NotBlank(message = "{MESSAGE.FIRSTNAME.EMPTY}")
     @Pattern(regexp = "^[A-Za-z]+$", message = "{MESSAGE.FIRSTNAME.VALID.FORMAT}")
     @Size(min = 4, max = 40, message = "{MESSAGE.FIRSTNAME.VALID.SIZE}")
     private String firstName;
+
+    @NotBlank(message = "{MESSAGE.APP.NAME.EMPTY}")
+    @Pattern(regexp = "^[A-Za-z]+$", message = "{MESSAGE.APP.NAME.VALID.FORMAT}")
+    @Size(min = 4, max = 40, message = "{MESSAGE.APP.NAME.VALID.SIZE}")
+    private String applicationName;
 
     @NotBlank(message = "{MESSAGE.LASTNAME.EMPTY}")
     @Pattern(regexp = "^[A-Za-z]+$", message = "{MESSAGE.LASTNAME.VALID.FORMAT}")
@@ -40,14 +43,11 @@ public class AuthUserDto {
     @Past(message = "{MESSAGE.VALID.DATE.OF.BIRTH}")
     private LocalDate dob;
 
-    @Min(value = 10, message = "{MESSAGE.WORkSPACE.MIN.SIZE}")
-    @Max(value = 100, message = "{MESSAGE.WORKSPACE.MAX.SIZE}")
-    private int workSpaceSize;
+    private String userType;
 
     private String status;
 
     @Size(min = 8, max = 150, message = "{MESSAGE.PASSWORD.MIN.LENGTH}")
     private String password;
 
-    private String userType;
 }

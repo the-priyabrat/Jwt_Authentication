@@ -2,18 +2,17 @@ package com.com.pri_vrat.authentication.service;
 
 import com.com.pri_vrat.authentication.config.RoleContext;
 import com.com.pri_vrat.authentication.config.TenantContext;
-import com.com.pri_vrat.authentication.config.WorkSpaceContext;
 import com.com.pri_vrat.authentication.dto.AppResponse;
 import com.com.pri_vrat.authentication.dto.Auth;
 import com.com.pri_vrat.authentication.entity.UserAuth;
 import com.com.pri_vrat.authentication.exception.customException.AuthenticationException;
 import com.com.pri_vrat.authentication.repository.AuthUserRepository;
 import com.com.pri_vrat.authentication.util.Constants;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpEntity;
@@ -25,7 +24,6 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.*;
 
@@ -51,7 +49,7 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
     private String realm;
 
     @Override
-    public AppResponse login(Auth auth) {
+    public AppResponse login(Auth auth) throws Exception {
         AppResponse loginResponse = new AppResponse();
         try {
             List<UserAuth> userListByEmail = authRepo.findByUserPrimaryKey_Email(auth.getEmail());
@@ -67,12 +65,12 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
             JSONObject tokenResponse = response.getDetails().getFirst();
             String token = tokenResponse.get("access_token").toString();
             JSONObject parsedJwt = parseAuthToken(token);
-            RoleContext.currentRole.set(parsedJwt.get(Constants.KEYCLOAK.DOC_USER_TYPE).toString());
-            TenantContext.currentTenant.set(parsedJwt.get(Constants.KEYCLOAK.DOC_TENANT_ID).toString());
-            WorkSpaceContext.currentWorkSpace.set(parsedJwt.get(Constants.KEYCLOAK.DOC_WORK_SPACE).toString());
+            if (parsedJwt != null) {
+                RoleContext.currentRole.set(parsedJwt.get(Constants.KEYCLOAK.LOG_USER_TYPE).toString());
+                TenantContext.currentTenant.set(parsedJwt.get(Constants.KEYCLOAK.LOG_TENANT_ID).toString());
+            }
             loginResponse.setCode(Constants.RESPONSE_CODE.SUCCESS);
             loginResponse.setMessage(messageSource.getMessage("MESSAGE.AUTH.LOGIN.SUCCESS", null, Locale.ENGLISH));
-            tokenResponse.remove("scope");
             loginResponse.setDetails(List.of(tokenResponse));
             return loginResponse;
         } catch (AuthenticationException e) {
@@ -117,7 +115,7 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
         return new HttpEntity<>(requestBody, header);
     }
 
-    private JSONObject parseAuthToken(String authToken) {
+    private JSONObject parseAuthToken(String authToken) throws Exception {
         try {
             assert authToken != null;
             String[] tokenPartitions = authToken.split("\\.");

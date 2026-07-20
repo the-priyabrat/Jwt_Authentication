@@ -14,9 +14,9 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((req) ->
-                req.requestMatchers("/authuser/api/register").permitAll()
-                        .requestMatchers("/authuser/api/login").permitAll()
-                        .requestMatchers("/authuser/api/verify").permitAll()
+                req.requestMatchers("/userAuth/api/register").permitAll()
+                        .requestMatchers("/userAuth/api/login").permitAll()
+                        .requestMatchers("/userAuth/api/verify").permitAll()
                         .anyRequest().authenticated()
         );
         http.csrf(AbstractHttpConfigurer::disable);

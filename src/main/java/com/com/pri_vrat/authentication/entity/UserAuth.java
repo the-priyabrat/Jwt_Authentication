@@ -14,7 +14,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-@Table(name = "DOC_USER_AUTH")
+@Table(name = "LOG_USER_AUTH")
 @Entity
 public class UserAuth {
     @EmbeddedId
@@ -22,7 +22,7 @@ public class UserAuth {
     private String firstName;
     private String lastName;
     private LocalDate dob;
-    private int workSpaceSize;
+    private String applicationName;
     private String status;
     private String password;
     private String userType;

@@ -6,6 +6,7 @@ import com.com.pri_vrat.authentication.dto.AuthUserDto;
 import com.com.pri_vrat.authentication.dto.VerificationDto;
 import com.com.pri_vrat.authentication.service.AuthTokenService;
 import com.com.pri_vrat.authentication.service.UserAuthService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("authuser/api")
+@RequestMapping("userAuth/api")
 public class UserRegistrationController {
 
     private final UserAuthService userService;
@@ -37,7 +38,7 @@ public class UserRegistrationController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AppResponse> login(@RequestBody Auth auth) {
+    public ResponseEntity<AppResponse> login(@RequestBody Auth auth) throws Exception {
         AppResponse response = tokenService.login(auth);
         return new ResponseEntity<>(response, new HttpHeaders(), HttpStatus.OK);
     }
