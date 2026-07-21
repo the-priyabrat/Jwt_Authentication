@@ -160,6 +160,7 @@ public class UserAuthServiceImplementation implements UserAuthService {
             userRepresentation.setFirstName(authDto.getFirstName());
             userRepresentation.setLastName(authDto.getLastName());
             userRepresentation.setEmail(authDto.getEmail());
+            userRepresentation.setEnabled(true);
 
             final String tenantId = authDto.getUserName().toUpperCase() + "_" + authDto.getApplicationName().toUpperCase();
 
