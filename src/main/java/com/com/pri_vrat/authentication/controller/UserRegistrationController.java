@@ -1,9 +1,6 @@
 package com.com.pri_vrat.authentication.controller;
 
-import com.com.pri_vrat.authentication.dto.AppResponse;
-import com.com.pri_vrat.authentication.dto.Auth;
-import com.com.pri_vrat.authentication.dto.AuthUserDto;
-import com.com.pri_vrat.authentication.dto.VerificationDto;
+import com.com.pri_vrat.authentication.dto.*;
 import com.com.pri_vrat.authentication.service.AuthTokenService;
 import com.com.pri_vrat.authentication.service.UserAuthService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -39,5 +36,11 @@ public class UserRegistrationController {
     public ResponseEntity<AppResponse> login(@RequestBody Auth auth) throws Exception {
         AppResponse response = tokenService.login(auth);
         return new ResponseEntity<>(response, new HttpHeaders(), HttpStatus.OK);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<AppResponse> logOut(@RequestBody LogoutRequestDto requestDto) {
+        AppResponse response = tokenService.logOut(requestDto);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

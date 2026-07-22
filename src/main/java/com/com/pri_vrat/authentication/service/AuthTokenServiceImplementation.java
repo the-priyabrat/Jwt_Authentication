@@ -4,21 +4,18 @@ import com.com.pri_vrat.authentication.config.RoleContext;
 import com.com.pri_vrat.authentication.config.TenantContext;
 import com.com.pri_vrat.authentication.dto.AppResponse;
 import com.com.pri_vrat.authentication.dto.Auth;
+import com.com.pri_vrat.authentication.dto.LogoutRequestDto;
 import com.com.pri_vrat.authentication.entity.UserAuth;
 import com.com.pri_vrat.authentication.exception.customException.AuthenticationException;
 import com.com.pri_vrat.authentication.repository.AuthUserRepository;
 import com.com.pri_vrat.authentication.util.Constants;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -47,6 +44,9 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
 
     @Value("${docmanager.keycloak.realm}")
     private String realm;
+
+    @Value("${log.keycloak.logout.endpoint}")
+    private String serverUri;
 
     @Override
     public AppResponse login(Auth auth) throws Exception {
@@ -82,6 +82,47 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
         }
     }
 
+    @Override
+    public AppResponse logOut(LogoutRequestDto requestDto) {
+        log.info("Entering in log out method");
+        if (requestDto != null && requestDto.getRefreshToken() == null) {
+            throw new AuthenticationException("Insufficient data");
+        }
+        try {
+            HttpEntity<MultiValueMap<String, String>> requestBody = getHttpEntityForRefreshToken(requestDto.getRefreshToken());
+            ResponseEntity<JSONObject> response = restTemplate.postForEntity(serverUri , requestBody, JSONObject.class);
+            AppResponse appResponse = new AppResponse();
+            if(response.getStatusCode().toString().equals("204 NO_CONTENT")) {
+                appResponse =AppResponse.builder()
+                        .code("SUCCESS")
+                        .message(messageSource.getMessage("USER.LOGGED.OUT.SUCCESS", null, Locale.ENGLISH))
+                        .details(List.of())
+                        .build();
+            }
+            return appResponse;
+        } catch (Exception e) {
+            log.error("exception at logOut() method...{}", e.getMessage());
+            throw e;
+        }
+    }
+
+    private HttpEntity<MultiValueMap<String, String>> getHttpEntityForRefreshToken(String refreshToken) {
+        log.info("Entering getHttpEntityForRefreshToken()");
+        try{
+            MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
+            requestBody.add("client_secret", clientSecret);
+            requestBody.add("realm", realm);
+            requestBody.add("refresh_token", refreshToken);
+            requestBody.add("client_id", clientId);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            return new HttpEntity<>(requestBody, headers);
+        } catch(Exception e) {
+            log.error("exception at getHttpEntityForRefreshToken() method...{}", e.getMessage());
+            throw e;
+        }
+    }
+
     private AppResponse getToken(Auth auth) {
         log.info("Entering into token service getToken()...");
         AppResponse appResponse = new AppResponse();
@@ -97,7 +138,7 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
             log.info(ex.getMessage());
             throw ex;
         } catch (Exception e) {
-            log.info("exception at getToken() method...{}", e.getMessage());
+            log.error("exception at getToken() method...{}", e.getMessage());
             throw e;
         }
     }
