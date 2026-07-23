@@ -4,7 +4,7 @@ import com.com.pri_vrat.authentication.config.RoleContext;
 import com.com.pri_vrat.authentication.config.TenantContext;
 import com.com.pri_vrat.authentication.dto.AppResponse;
 import com.com.pri_vrat.authentication.dto.Auth;
-import com.com.pri_vrat.authentication.dto.LogoutRequestDto;
+import com.com.pri_vrat.authentication.dto.AuthRequestDto;
 import com.com.pri_vrat.authentication.entity.UserAuth;
 import com.com.pri_vrat.authentication.exception.customException.AuthenticationException;
 import com.com.pri_vrat.authentication.repository.AuthUserRepository;
@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.simple.JSONObject;
+import org.keycloak.OAuth2Constants;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.http.*;
@@ -83,17 +84,17 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
     }
 
     @Override
-    public AppResponse logOut(LogoutRequestDto requestDto) {
+    public AppResponse logOut(AuthRequestDto requestDto) {
         log.info("Entering in log out method");
         if (requestDto != null && requestDto.getRefreshToken() == null) {
             throw new AuthenticationException("Insufficient data");
         }
         try {
             HttpEntity<MultiValueMap<String, String>> requestBody = getHttpEntityForRefreshToken(requestDto.getRefreshToken());
-            ResponseEntity<JSONObject> response = restTemplate.postForEntity(serverUri , requestBody, JSONObject.class);
+            ResponseEntity<JSONObject> response = restTemplate.postForEntity(serverUri, requestBody, JSONObject.class);
             AppResponse appResponse = new AppResponse();
-            if(response.getStatusCode().toString().equals("204 NO_CONTENT")) {
-                appResponse =AppResponse.builder()
+            if (response.getStatusCode().toString().equals("204 NO_CONTENT")) {
+                appResponse = AppResponse.builder()
                         .code("SUCCESS")
                         .message(messageSource.getMessage("USER.LOGGED.OUT.SUCCESS", null, Locale.ENGLISH))
                         .details(List.of())
@@ -106,18 +107,51 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
         }
     }
 
+    @Override
+    public AppResponse refreshToken(AuthRequestDto requestDto) {
+        if (requestDto != null && requestDto.getRefreshToken().isEmpty()) {
+            throw new AuthenticationException("Invalid refresh token");
+        }
+        assert requestDto != null;
+        String refreshToken = requestDto.getRefreshToken();
+        try {
+            MultiValueMap<String, String> multiValueMap = new LinkedMultiValueMap<>();
+            multiValueMap.add(Constants.KEYCLOAK.CLIENT_ID, clientId);
+            multiValueMap.add(Constants.KEYCLOAK.CLIENT_SECRET, clientSecret);
+            multiValueMap.add(Constants.KEYCLOAK.GRANT_TYPE, OAuth2Constants.REFRESH_TOKEN);
+            multiValueMap.add(Constants.KEYCLOAK.REFRESH_TOKEN, refreshToken);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            HttpEntity<MultiValueMap<String, String>> httpEntity = new HttpEntity<>(multiValueMap, headers);
+            ResponseEntity<JSONObject> response = restTemplate.postForEntity(tokenEndPoint, httpEntity, JSONObject.class);
+            if(response.getStatusCode().toString().equals("400 Bad Request")) {
+                throw new AuthenticationException("Session not active");
+            }else if (!response.getStatusCode().toString().equals("200 OK")) {
+                throw new AuthenticationException("Invalid grants");
+            }
+            return AppResponse.builder()
+                    .code("SUCCESS")
+                    .message(messageSource.getMessage("REFRESH.TOKEN.SUCCESS",null, Locale.ENGLISH))
+                    .details(List.of(Objects.requireNonNull(response.getBody())))
+                    .build();
+        } catch (Exception e) {
+            log.error("exception at refreshToken() method...{}", e.getMessage());
+            throw e;
+        }
+    }
+
     private HttpEntity<MultiValueMap<String, String>> getHttpEntityForRefreshToken(String refreshToken) {
         log.info("Entering getHttpEntityForRefreshToken()");
-        try{
+        try {
             MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
-            requestBody.add("client_secret", clientSecret);
-            requestBody.add("realm", realm);
-            requestBody.add("refresh_token", refreshToken);
-            requestBody.add("client_id", clientId);
+            requestBody.add(Constants.KEYCLOAK.CLIENT_SECRET, clientSecret);
+            requestBody.add(Constants.KEYCLOAK.REALM, realm);
+            requestBody.add(Constants.KEYCLOAK.REFRESH_TOKEN, refreshToken);
+            requestBody.add(Constants.KEYCLOAK.CLIENT_ID, clientId);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
             return new HttpEntity<>(requestBody, headers);
-        } catch(Exception e) {
+        } catch (Exception e) {
             log.error("exception at getHttpEntityForRefreshToken() method...{}", e.getMessage());
             throw e;
         }
@@ -145,12 +179,12 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
 
     private HttpEntity<?> getHttpEntity(Auth auth) {
         MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
-        requestBody.add("client_id", clientId);
-        requestBody.add("realm", realm);
-        requestBody.add("client_secret", clientSecret);
-        requestBody.add("grant_type", Constants.KEYCLOAK.GRANT_TYPE);
-        requestBody.add("username", auth.getEmail());
-        requestBody.add("password", auth.getPassword());
+        requestBody.add(Constants.KEYCLOAK.CLIENT_ID, clientId);
+        requestBody.add(Constants.KEYCLOAK.REALM, realm);
+        requestBody.add(Constants.KEYCLOAK.CLIENT_SECRET, clientSecret);
+        requestBody.add(Constants.KEYCLOAK.GRANT_TYPE, OAuth2Constants.PASSWORD);
+        requestBody.add(Constants.KEYCLOAK.USER_NAME, auth.getEmail());
+        requestBody.add(Constants.KEYCLOAK.PASSWORD, auth.getPassword());
         HttpHeaders header = new HttpHeaders();
         header.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         return new HttpEntity<>(requestBody, header);

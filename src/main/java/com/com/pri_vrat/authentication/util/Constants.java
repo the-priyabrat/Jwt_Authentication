@@ -8,14 +8,27 @@ public class Constants {
         public static String COMPLETED = "Completed";
         public static String REJECTED = "Rejected";
     }
+    /*  requestBody.add("client_secret", clientSecret);
+            requestBody.add("realm", realm);
+            requestBody.add("refresh_token", refreshToken);
+            requestBody.add("client_id", clientId);*/
+
     public static class KEYCLOAK {
-        public static String GRANT_TYPE = "password";
-        public static String LOG_APP_NAME = "LOG_APP_NAME";
-        public static String LOG_TENANT_ID = "LOG-TENANT-ID";
-        public static String LOG_USER_NAME = "LOG-USER-NAME";
-        public static String LOG_USER_TYPE = "LOG-USER-TYPE";
-        public static String ACCOUNT_DISABLED= "Account disabled";
+        public static final String CLIENT_SECRET = "client_secret";
+        public static final String REALM = "realm";
+        public static final String REFRESH_TOKEN = "refresh_token";
+        public static final String CLIENT_ID = "client_id";
+        public static final String GRANT_TYPE = "grant_type";
+        public static final String USER_NAME = "username";
+        public static final String PASSWORD = "password";
+        public static final String LOG_APP_NAME = "LOG_APP_NAME";
+        public static final String LOG_TENANT_ID = "LOG-TENANT-ID";
+        public static final String LOG_USER_NAME = "LOG-USER-NAME";
+        public static final String LOG_USER_TYPE = "LOG-USER-TYPE";
+        public static final String ACCOUNT_DISABLED = "Account disabled";
+        public static final String CONTENT_TYPE = "Content-Type";
     }
+
     public static class RESPONSE_CODE {
         public static String SUCCESS = "SUCCESS";
         public static String FAILED = "FAILED";

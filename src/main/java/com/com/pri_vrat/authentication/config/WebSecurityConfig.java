@@ -18,6 +18,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/userAuth/api/login").permitAll()
                         .requestMatchers("/userAuth/api/verify").permitAll()
                         .requestMatchers("/userAuth/api/logout").permitAll()
+                        .requestMatchers("/userAuth/api/refreshToken").permitAll()
                         .anyRequest().authenticated()
         );
         http.csrf(AbstractHttpConfigurer::disable);

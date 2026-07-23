@@ -9,6 +9,6 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class LogoutRequestDto {
+public class AuthRequestDto {
     private String refreshToken;
 }

@@ -3,7 +3,6 @@ package com.com.pri_vrat.authentication.controller;
 import com.com.pri_vrat.authentication.dto.*;
 import com.com.pri_vrat.authentication.service.AuthTokenService;
 import com.com.pri_vrat.authentication.service.UserAuthService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -39,8 +38,14 @@ public class UserRegistrationController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<AppResponse> logOut(@RequestBody LogoutRequestDto requestDto) {
+    public ResponseEntity<AppResponse> logOut(@RequestBody AuthRequestDto requestDto) {
         AppResponse response = tokenService.logOut(requestDto);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/refreshToken")
+    public ResponseEntity<AppResponse> refreshToken(@RequestBody AuthRequestDto requestDto) {
+        AppResponse response = tokenService.refreshToken(requestDto);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
