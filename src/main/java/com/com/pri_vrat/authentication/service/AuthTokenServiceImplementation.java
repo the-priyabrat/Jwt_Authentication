@@ -90,7 +90,7 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
             throw new AuthenticationException("Insufficient data");
         }
         try {
-            HttpEntity<MultiValueMap<String, String>> requestBody = getHttpEntityForRefreshToken(requestDto.getRefreshToken());
+            HttpEntity<MultiValueMap<String, String>> requestBody = getHttpEntityForLogout(requestDto.getRefreshToken());
             ResponseEntity<JSONObject> response = restTemplate.postForEntity(serverUri, requestBody, JSONObject.class);
             AppResponse appResponse = new AppResponse();
             if (response.getStatusCode().toString().equals("204 NO_CONTENT")) {
@@ -102,6 +102,7 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
             }
             return appResponse;
         } catch (Exception e) {
+            e.printStackTrace();
             log.error("exception at logOut() method...{}", e.getMessage());
             throw e;
         }
@@ -140,8 +141,8 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
         }
     }
 
-    private HttpEntity<MultiValueMap<String, String>> getHttpEntityForRefreshToken(String refreshToken) {
-        log.info("Entering getHttpEntityForRefreshToken()");
+    private HttpEntity<MultiValueMap<String, String>> getHttpEntityForLogout(String refreshToken) {
+        log.info("Entering getHttpEntityForLogout()");
         try {
             MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
             requestBody.add(Constants.KEYCLOAK.CLIENT_SECRET, clientSecret);
@@ -152,7 +153,7 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
             return new HttpEntity<>(requestBody, headers);
         } catch (Exception e) {
-            log.error("exception at getHttpEntityForRefreshToken() method...{}", e.getMessage());
+            log.error("exception at getHttpEntityForLogout() method...{}", e.getMessage());
             throw e;
         }
     }
