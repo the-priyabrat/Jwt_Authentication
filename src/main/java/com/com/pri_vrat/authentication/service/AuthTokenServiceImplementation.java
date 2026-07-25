@@ -102,7 +102,6 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
             }
             return appResponse;
         } catch (Exception e) {
-            e.printStackTrace();
             log.error("exception at logOut() method...{}", e.getMessage());
             throw e;
         }
