@@ -1,7 +1,7 @@
 package com.com.pri_vrat.authentication.service;
 
+import com.com.pri_vrat.authentication.config.UserNameContext;
 import com.com.pri_vrat.authentication.dto.AppResponse;
-import com.com.pri_vrat.authentication.dto.Auth;
 import com.com.pri_vrat.authentication.dto.AuthUserDto;
 import com.com.pri_vrat.authentication.dto.VerificationDto;
 import com.com.pri_vrat.authentication.entity.AuthUserPk;
@@ -11,11 +11,9 @@ import com.com.pri_vrat.authentication.exception.customException.VerificationExc
 import com.com.pri_vrat.authentication.repository.AuthUserRepository;
 import com.com.pri_vrat.authentication.util.Constants;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.catalina.User;
 import org.json.simple.JSONObject;
 import org.keycloak.admin.client.CreatedResponseUtil;
 import org.keycloak.admin.client.Keycloak;
@@ -26,6 +24,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -33,12 +34,12 @@ import java.util.*;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-public class UserAuthServiceImplementation implements UserAuthService {
+public class AccountManagementServiceImplementation implements AccountManagementService {
 
     private final AuthUserRepository authUserRepository;
     private final MessageSource messageSource;
     private final Keycloak keycloak;
-    private Logger logger = LoggerFactory.getLogger(UserAuthServiceImplementation.class);
+    private Logger logger = LoggerFactory.getLogger(AccountManagementServiceImplementation.class);
 
     @Value("${docmanager.keycloak.realm}")
     private String realm;
@@ -136,6 +137,39 @@ public class UserAuthServiceImplementation implements UserAuthService {
             rollBackVerification(currentUser, currentUserResource);
             log.info("Exception at verifyUser()..{}", e.getMessage());
             throw e;
+        }
+    }
+
+    @Override
+    public AppResponse getUserDetails() {
+        try {
+            log.info("Entering into getUserDetails()");
+            JwtAuthenticationToken authenticationToken =
+                    (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+            Jwt jwt = authenticationToken.getToken();
+            String loggedInUser = jwt.getClaimAsString("LOG-USER-NAME");
+            if (loggedInUser == null || loggedInUser.isBlank()) {
+                return AppResponse.builder()
+                        .code("FAILED")
+                        .message(messageSource.getMessage("USER.DETAILS.FETCH.ANONYMOUS", null, Locale.ENGLISH))
+                        .details(List.of())
+                        .build();
+            }
+            List<UserAuth> authenticatedUserList = authUserRepository.findByUserPrimaryKey_UserName(loggedInUser);
+            UserAuth authenticatedUser = authenticatedUserList.getFirst();
+            JSONObject response = new JSONObject();
+            response.put("firstName", authenticatedUser.getFirstName());
+            response.put("lastName", authenticatedUser.getLastName());
+            response.put("email", authenticatedUser.getUserPrimaryKey().getEmail());
+            response.put("userName", authenticatedUser.getUserPrimaryKey().getUserName());
+            return AppResponse.builder()
+                    .code("SUCCESS")
+                    .message(messageSource.getMessage("USER.DETAILS.FETCH.SUCCESS", null, Locale.ENGLISH))
+                    .details(List.of(response))
+                    .build();
+        } catch (Exception ex) {
+            log.error("Failed for message {} at method {}", ex.getMessage(), "getUserDetails()");
+            throw ex;
         }
     }
 

@@ -2,7 +2,7 @@ package com.com.pri_vrat.authentication.controller;
 
 import com.com.pri_vrat.authentication.dto.*;
 import com.com.pri_vrat.authentication.service.AuthTokenService;
-import com.com.pri_vrat.authentication.service.UserAuthService;
+import com.com.pri_vrat.authentication.service.AccountManagementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin("http://localhost:4300")
 public class UserRegistrationController {
 
-    private final UserAuthService userService;
+    private final AccountManagementService userService;
     private final AuthTokenService tokenService;
 
     @PostMapping("/register")
@@ -46,6 +46,12 @@ public class UserRegistrationController {
     @PostMapping("/refreshToken")
     public ResponseEntity<AppResponse> refreshToken(@RequestBody AuthRequestDto requestDto) {
         AppResponse response = tokenService.refreshToken(requestDto);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/getUserDetails")
+    public ResponseEntity<AppResponse> getUserDetails() {
+        AppResponse response = userService.getUserDetails();
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

@@ -193,6 +193,7 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
 
     private JSONObject parseAuthToken(String authToken) throws Exception {
         try {
+            log.info("Entering into parseAuthToke()");
             assert authToken != null;
             String[] tokenPartitions = authToken.split("\\.");
             if (tokenPartitions.length != 3) {
