@@ -39,7 +39,7 @@ public class AccountManagementServiceImplementation implements AccountManagement
     private final AuthUserRepository authUserRepository;
     private final MessageSource messageSource;
     private final Keycloak keycloak;
-    private Logger logger = LoggerFactory.getLogger(AccountManagementServiceImplementation.class);
+    private final FlywayMigrationService migrationService;
 
     @Value("${docmanager.keycloak.realm}")
     private String realm;
@@ -47,7 +47,7 @@ public class AccountManagementServiceImplementation implements AccountManagement
     @Transactional
     @Override
     public AppResponse registerUser(AuthUserDto authDto) throws RegistrationException {
-        logger.info("Entered into user registration----!");
+        log.info("Entered into user registration----!");
         AppResponse response = new AppResponse();
         String userId = null;
         final String workSpaceId = UUID.randomUUID().toString();
@@ -76,22 +76,24 @@ public class AccountManagementServiceImplementation implements AccountManagement
             if (keycloakResponse.get("CODE").equals(Constants.RESPONSE_CODE.FAILED)) {
                 throw new RegistrationException(keycloakResponse.get("MESSAGE").toString());
             }
+            final String tenantId =
+                    authDto.getUserName().toUpperCase() + "_" + authDto.getApplicationName().toUpperCase();
             UserAuth registrarUser = getAuthUserBuilder(authDto, userPk);
+            registrarUser.setTenantId(tenantId);
             UserAuth savedUser = authUserRepository.save(registrarUser);
-            if (savedUser == null) {
-                throw new RegistrationException(messageSource.getMessage("MESSAGE.REGISTRATION.FAILED", null, Locale.ENGLISH));
-            }
+            migrationService.tenantMigration(tenantId);
             response.setCode(Constants.RESPONSE_CODE.SUCCESS);
-            response.setMessage(messageSource.getMessage("MESSAGE.REGISTRATION.SUCCESS", null, Locale.ENGLISH));
+            response.setMessage(messageSource
+                    .getMessage("MESSAGE.REGISTRATION.SUCCESS", null, Locale.ENGLISH));
             response.setDetails(Collections.emptyList());
-            logger.info("Leave from user registration----!");
+            log.info("Leave from user registration----!");
             return response;
         } catch (Exception e) {
-            logger.info("Exception occurred in registerUser()...{} ", e.toString());
+            log.info("Exception occurred in registerUser()...{} ", e.toString());
             if (userId != null && userId.isEmpty()) {
                 rollBack(userId);
             }
-            logger.info("Exception occurred in registerUser()...{} ", e.toString());
+            log.info("Exception occurred in registerUser()...{} ", e.toString());
             throw e;
         }
     }
@@ -181,12 +183,13 @@ public class AccountManagementServiceImplementation implements AccountManagement
                 .dob(authDto.getDob())
                 .status(Constants.STATUS.PENDING)
                 .userPrimaryKey(userPk)
+                .applicationName(authDto.getApplicationName())
                 .password(authDto.getPassword())
                 .build();
     }
 
     public JSONObject registerUserInKeycloak(AuthUserDto authDto) {
-        logger.info("Entered into keycloak registration----!");
+        log.info("Entered into keycloak registration----!");
         JSONObject keycloakResponse = new JSONObject();
         try {
             UserRepresentation userRepresentation = new UserRepresentation();
@@ -221,16 +224,17 @@ public class AccountManagementServiceImplementation implements AccountManagement
                 keycloakResponse.put("CODE", Constants.RESPONSE_CODE.SUCCESS);
                 keycloakResponse.put("MESSAGE", "User created");
                 keycloakResponse.put("USER_ID", userId);
+                keycloakResponse.put("tenantId", tenantId);
             } else {
                 keycloakResponse.put("CODE", Constants.RESPONSE_CODE.FAILED);
                 keycloakResponse.put("MESSAGE", response.getStatus());
             }
-            logger.info("Leave from keycloak registration----!");
+            log.info("Leave from keycloak registration----!");
             return keycloakResponse;
         } catch (Exception e) {
             keycloakResponse.put("CODE", Constants.RESPONSE_CODE.FAILED);
             keycloakResponse.put("MESSAGE", "User creation failed");
-            logger.info("Exception occurred at registerUserInKeycloak()...{}", e.toString());
+            log.info("Exception occurred at registerUserInKeycloak()...{}", e.toString());
         }
         return keycloakResponse;
     }

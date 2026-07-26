@@ -25,5 +25,6 @@ public class UserAuth {
     private String applicationName;
     private String status;
     private String password;
+    private String tenantId;
     private String userType;
 }

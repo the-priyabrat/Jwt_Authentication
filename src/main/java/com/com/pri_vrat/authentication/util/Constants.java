@@ -27,7 +27,7 @@ public class Constants {
         public static final String LOG_USER_TYPE = "LOG-USER-TYPE";
         public static final String ACCOUNT_DISABLED = "Account disabled";
         public static final String CONTENT_TYPE = "Content-Type";
-        public static final String DEFAULT_USER= "GUEST";
+        public static final String DEFAULT_USER = "GUEST";
     }
 
     public static class RESPONSE_CODE {
@@ -35,5 +35,9 @@ public class Constants {
         public static String FAILED = "FAILED";
         public static String ERROR = "ERROR";
         public static String EXCEPTION = "EXCEPTION";
+    }
+
+    public static class SCHEMA {
+        public static final String DEFAULT_SCHEMA = "public";
     }
 }
