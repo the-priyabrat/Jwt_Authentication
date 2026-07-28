@@ -27,4 +27,5 @@ public class UserAuth {
     private String password;
     private String tenantId;
     private String userType;
+    private String apiKey;
 }

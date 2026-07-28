@@ -54,4 +54,9 @@ public class UserRegistrationController {
         AppResponse response = userService.getUserDetails();
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    @GetMapping("/apiKeyDetails/{apiKey}")
+    public UserApiKeyResponseDto getApiKeyDetails(@PathVariable String apiKey) {
+        return userService.getApiKeyDetails(apiKey);
+    }
 }

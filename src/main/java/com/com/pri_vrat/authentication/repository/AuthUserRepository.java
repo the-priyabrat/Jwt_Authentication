@@ -11,4 +11,5 @@ import java.util.List;
 public interface AuthUserRepository extends JpaRepository<UserAuth, AuthUserPk> {
     public List<UserAuth> findByUserPrimaryKey_UserName(String userName);
     public List<UserAuth> findByUserPrimaryKey_Email(String email);
+    public List<UserAuth> findByApiKey(String apiKey);
 }

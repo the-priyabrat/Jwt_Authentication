@@ -3,9 +3,11 @@ package com.com.pri_vrat.authentication.service;
 import com.com.pri_vrat.authentication.config.UserNameContext;
 import com.com.pri_vrat.authentication.dto.AppResponse;
 import com.com.pri_vrat.authentication.dto.AuthUserDto;
+import com.com.pri_vrat.authentication.dto.UserApiKeyResponseDto;
 import com.com.pri_vrat.authentication.dto.VerificationDto;
 import com.com.pri_vrat.authentication.entity.AuthUserPk;
 import com.com.pri_vrat.authentication.entity.UserAuth;
+import com.com.pri_vrat.authentication.exception.customException.AuthenticationException;
 import com.com.pri_vrat.authentication.exception.customException.RegistrationException;
 import com.com.pri_vrat.authentication.exception.customException.VerificationException;
 import com.com.pri_vrat.authentication.repository.AuthUserRepository;
@@ -22,6 +24,7 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,6 +32,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.*;
 
 @Slf4j
@@ -76,9 +81,13 @@ public class AccountManagementServiceImplementation implements AccountManagement
             if (keycloakResponse.get("CODE").equals(Constants.RESPONSE_CODE.FAILED)) {
                 throw new RegistrationException(keycloakResponse.get("MESSAGE").toString());
             }
-            final String tenantId =
-                    authDto.getUserName().toUpperCase() + "_" + authDto.getApplicationName().toUpperCase();
+            final String tenantId = authDto.getUserName()
+                    .toUpperCase() + "_" + authDto
+                    .getApplicationName()
+                    .toUpperCase();
+            final String apiKey = generateApiKey();
             UserAuth registrarUser = getAuthUserBuilder(authDto, userPk);
+            registrarUser.setApiKey(apiKey);
             registrarUser.setTenantId(tenantId);
             UserAuth savedUser = authUserRepository.save(registrarUser);
             migrationService.tenantMigration(tenantId);
@@ -94,6 +103,18 @@ public class AccountManagementServiceImplementation implements AccountManagement
                 rollBack(userId);
             }
             log.info("Exception occurred in registerUser()...{} ", e.toString());
+            throw e;
+        }
+    }
+
+    private String generateApiKey() {
+        try {
+            SecureRandom secureRandom = new SecureRandom();
+            byte[] bytes = new byte[32];
+            secureRandom.nextBytes(bytes);
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        } catch (Exception e) {
+            log.error("Failed for {} at {}", e.getMessage(), "getApiKey()");
             throw e;
         }
     }
@@ -171,6 +192,24 @@ public class AccountManagementServiceImplementation implements AccountManagement
                     .build();
         } catch (Exception ex) {
             log.error("Failed for message {} at method {}", ex.getMessage(), "getUserDetails()");
+            throw ex;
+        }
+    }
+
+    @Override
+    public UserApiKeyResponseDto getApiKeyDetails(String apiKey) {
+        try {
+            List<UserAuth> userAuths = authUserRepository.findByApiKey(apiKey);
+            if(userAuths.isEmpty()) {
+                throw new AuthenticationException("API.KEY.INFO.NOT.FOUND");
+            }
+            UserApiKeyResponseDto userApiKeyResponseDto = new UserApiKeyResponseDto();
+            BeanUtils.copyProperties(userAuths.getFirst(), userApiKeyResponseDto);
+            userApiKeyResponseDto.setEmail(userAuths.getFirst().getUserPrimaryKey().getEmail());
+            userApiKeyResponseDto.setUserName(userAuths.getFirst().getUserPrimaryKey().getUserName());
+            return userApiKeyResponseDto;
+        } catch (Exception ex) {
+            log.error("Failed due to {} at method {}", ex.getMessage(), "getUserDetails()");
             throw ex;
         }
     }
