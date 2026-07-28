@@ -1,16 +1,16 @@
 package com.com.pri_vrat.authentication.service;
 
 import com.com.pri_vrat.authentication.config.UserNameContext;
-import com.com.pri_vrat.authentication.dto.AppResponse;
-import com.com.pri_vrat.authentication.dto.AuthUserDto;
-import com.com.pri_vrat.authentication.dto.UserApiKeyResponseDto;
-import com.com.pri_vrat.authentication.dto.VerificationDto;
+import com.com.pri_vrat.authentication.dto.*;
 import com.com.pri_vrat.authentication.entity.AuthUserPk;
 import com.com.pri_vrat.authentication.entity.UserAuth;
+import com.com.pri_vrat.authentication.exception.customException.ApiKeyGenerationException;
 import com.com.pri_vrat.authentication.exception.customException.AuthenticationException;
 import com.com.pri_vrat.authentication.exception.customException.RegistrationException;
 import com.com.pri_vrat.authentication.exception.customException.VerificationException;
+import com.com.pri_vrat.authentication.repository.ApiKeyRepository;
 import com.com.pri_vrat.authentication.repository.AuthUserRepository;
+import com.com.pri_vrat.authentication.service.apikey.ApiKeyService;
 import com.com.pri_vrat.authentication.util.Constants;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.Response;
@@ -45,6 +45,8 @@ public class AccountManagementServiceImplementation implements AccountManagement
     private final MessageSource messageSource;
     private final Keycloak keycloak;
     private final FlywayMigrationService migrationService;
+    private final ApiKeyService apiKeyService;
+    private final GetCurrentUserService currentUserService;
 
     @Value("${docmanager.keycloak.realm}")
     private String realm;
@@ -87,9 +89,16 @@ public class AccountManagementServiceImplementation implements AccountManagement
                     .toUpperCase();
             final String apiKey = generateApiKey();
             UserAuth registrarUser = getAuthUserBuilder(authDto, userPk);
+            ApiKeyReqDto apiKeyReqDto = ApiKeyReqDto.builder()
+                    .apiKey(apiKey)
+                    .tenantId(tenantId)
+                    .email(registrarUser.getUserPrimaryKey().getEmail())
+                    .userName(registrarUser.getUserPrimaryKey().getUserName())
+                    .build();
             registrarUser.setApiKey(apiKey);
             registrarUser.setTenantId(tenantId);
             UserAuth savedUser = authUserRepository.save(registrarUser);
+            apiKeyService.saveApiKey(apiKeyReqDto);
             migrationService.tenantMigration(tenantId);
             response.setCode(Constants.RESPONSE_CODE.SUCCESS);
             response.setMessage(messageSource
@@ -200,7 +209,7 @@ public class AccountManagementServiceImplementation implements AccountManagement
     public UserApiKeyResponseDto getApiKeyDetails(String apiKey) {
         try {
             List<UserAuth> userAuths = authUserRepository.findByApiKey(apiKey);
-            if(userAuths.isEmpty()) {
+            if (userAuths.isEmpty()) {
                 throw new AuthenticationException("API.KEY.INFO.NOT.FOUND");
             }
             UserApiKeyResponseDto userApiKeyResponseDto = new UserApiKeyResponseDto();
@@ -210,6 +219,35 @@ public class AccountManagementServiceImplementation implements AccountManagement
             return userApiKeyResponseDto;
         } catch (Exception ex) {
             log.error("Failed due to {} at method {}", ex.getMessage(), "getUserDetails()");
+            throw ex;
+        }
+    }
+
+    @Override
+    public AppResponse regenerateAccessToken() {
+        try {
+            String userName = currentUserService.getCurrentUser().getCurrentUserName();
+            List<UserAuth> userAuthList = authUserRepository.findByUserPrimaryKey_UserName(userName);
+            if (userAuthList.isEmpty()) {
+                throw new ApiKeyGenerationException(messageSource.getMessage("API.KEY.GENERATION.FAILED.NO.OLDER.ID", null, Locale.ENGLISH));
+            }
+            UserAuth userAuth = userAuthList.getFirst();
+            String newApiKey = generateApiKey();
+            userAuth.setApiKey(newApiKey);
+            ApiKeyReqDto apiKeyReqDto = ApiKeyReqDto.builder()
+                    .newApiKey(newApiKey)
+                    .email(userAuth.getUserPrimaryKey().getEmail())
+                    .build();
+            if (!apiKeyService.updateApiKeyDetails(apiKeyReqDto)) {
+                throw new ApiKeyGenerationException(messageSource.getMessage("API.KEY.GENERATION.FAILED", null, Locale.ENGLISH));
+            }
+            authUserRepository.save(userAuth);
+            return AppResponse.builder()
+                    .code("SUCCESS")
+                    .message(messageSource.getMessage("API.KEY.GENERATION.SUCCESSFUL", null, Locale.ENGLISH))
+                    .build();
+        } catch (Exception ex) {
+            log.error(Constants.EXCEPTION.PREFIX, ex.getMessage(), "regenerateAccessToken(String oldApikey)");
             throw ex;
         }
     }

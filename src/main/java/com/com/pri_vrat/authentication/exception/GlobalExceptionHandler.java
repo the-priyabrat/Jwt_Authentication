@@ -1,6 +1,7 @@
 package com.com.pri_vrat.authentication.exception;
 
 import com.com.pri_vrat.authentication.dto.AppResponse;
+import com.com.pri_vrat.authentication.exception.customException.ApiKeyGenerationException;
 import com.com.pri_vrat.authentication.exception.customException.AuthenticationException;
 import com.com.pri_vrat.authentication.exception.customException.RegistrationException;
 import com.com.pri_vrat.authentication.exception.customException.VerificationException;
@@ -83,6 +84,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(VerificationException.class)
     public ResponseEntity<AppResponse> verificationException(VerificationException ex) {
         log.info("Verification failed, exception occurred....");
+        AppResponse exceptionResponse = new AppResponse();
+        exceptionResponse.setCode(Constants.RESPONSE_CODE.FAILED);
+        exceptionResponse.setMessage(ex.getMessage());
+        exceptionResponse.setDetails(Collections.emptyList());
+        return new ResponseEntity<>(exceptionResponse, new HttpHeaders(), HttpStatus.OK);
+    }
+
+    @ExceptionHandler(ApiKeyGenerationException.class)
+    public ResponseEntity<AppResponse> handelApiKeyException(ApiKeyGenerationException ex) {
+        log.info("Key generation failed, exception occurred....");
         AppResponse exceptionResponse = new AppResponse();
         exceptionResponse.setCode(Constants.RESPONSE_CODE.FAILED);
         exceptionResponse.setMessage(ex.getMessage());

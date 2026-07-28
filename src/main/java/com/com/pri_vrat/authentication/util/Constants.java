@@ -2,16 +2,21 @@ package com.com.pri_vrat.authentication.util;
 
 public class Constants {
     public static class STATUS {
-        public static String PENDING = "Pending";
-        public static String DELETED = "Deleted";
-        public static String APPROVED = "Approved";
-        public static String COMPLETED = "Completed";
-        public static String REJECTED = "Rejected";
+        public static final String PENDING = "Pending";
+        public static final String DELETED = "Deleted";
+        public static final String APPROVED = "Approved";
+        public static final String COMPLETED = "Completed";
+        public static final String REJECTED = "Rejected";
     }
-    /*  requestBody.add("client_secret", clientSecret);
-            requestBody.add("realm", realm);
-            requestBody.add("refresh_token", refreshToken);
-            requestBody.add("client_id", clientId);*/
+
+    public static class API_KEY {
+        public static final String ACTIVE = "Active";
+        public static final String INACTIVE = "Inactive";
+    }
+
+    public static class EXCEPTION {
+        public static final String PREFIX = "Failed for message {} at method {}";
+    }
 
     public static class KEYCLOAK {
         public static final String CLIENT_SECRET = "client_secret";

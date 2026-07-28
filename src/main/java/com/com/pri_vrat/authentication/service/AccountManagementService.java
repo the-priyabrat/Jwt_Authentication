@@ -14,4 +14,6 @@ public interface AccountManagementService {
     public AppResponse getUserDetails();
 
     public UserApiKeyResponseDto getApiKeyDetails(String apiKey);
+
+    public AppResponse regenerateAccessToken();
 }
