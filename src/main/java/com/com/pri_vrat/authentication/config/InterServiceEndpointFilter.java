@@ -38,7 +38,6 @@ public class InterServiceEndpointFilter extends OncePerRequestFilter {
         //the next public endpoints to be added by || like || antMatcher.matches(example/get/**)
         if (matches) {
             final String requestAccessKey = request.getHeader(Constants.CustomHeader.X_ACCESS_KEY);
-            System.out.println(requestAccessKey);
             if (!Objects.equals(publicApiKey, requestAccessKey)) {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
