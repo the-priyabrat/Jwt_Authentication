@@ -1,0 +1,1 @@
+ALTER TABLE log_trace ALTER COLUMN operation_status SET DEFAULT 'PENDING';
