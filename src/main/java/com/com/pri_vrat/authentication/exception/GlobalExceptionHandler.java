@@ -1,10 +1,7 @@
 package com.com.pri_vrat.authentication.exception;
 
 import com.com.pri_vrat.authentication.dto.AppResponse;
-import com.com.pri_vrat.authentication.exception.customException.ApiKeyGenerationException;
-import com.com.pri_vrat.authentication.exception.customException.AuthenticationException;
-import com.com.pri_vrat.authentication.exception.customException.RegistrationException;
-import com.com.pri_vrat.authentication.exception.customException.VerificationException;
+import com.com.pri_vrat.authentication.exception.customException.*;
 import com.com.pri_vrat.authentication.util.Constants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +22,7 @@ import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.*;
 
+@SuppressWarnings("unchecked")
 @Slf4j
 @RequiredArgsConstructor
 @RestControllerAdvice
@@ -32,24 +30,25 @@ public class GlobalExceptionHandler {
 
     private final MessageSource messageSource;
 
-//    @ExceptionHandler(Exception.class)
-//    public ResponseEntity<AppResponse> ExceptionHandler(Exception e) {
-//        log.info("Exception handler");
-//        log.info("Failed for message {}",e.getMessage());
-//        JSONObject exception = new JSONObject();
-//        AppResponse exceptionResponse = new AppResponse();
-//        exceptionResponse.setCode(Constants.RESPONSE_CODE.FAILED);
-//        exceptionResponse.setMessage(messageSource.getMessage("MESSAGE.EXCEPTION.OCCURRED", null, Locale.ENGLISH));
-//        exceptionResponse.setDetails(Collections.emptyList());
-//        return new ResponseEntity<>(exceptionResponse, new HttpHeaders(), HttpStatus.OK);
-//    }
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<AppResponse> ExceptionHandler(Exception e) {
+        log.error("Unexpected exception occurred with message ",e);
+        return new ResponseEntity<>(
+                AppResponse.builder()
+                        .code("FAILED")
+                        .message("Something went wrong !")
+                        .details(Collections.EMPTY_LIST)
+                        .build(), HttpStatus.OK
+        );
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<AppResponse> validationException(MethodArgumentNotValidException ex) {
         log.info("Method validation exception");
         AppResponse exceptionResponse = new AppResponse();
         exceptionResponse.setCode(Constants.RESPONSE_CODE.FAILED);
-        exceptionResponse.setMessage(messageSource.getMessage("MESSAGE.REGISTRATION.ARGUMENTS.INVALID", null, Locale.ENGLISH));
+        exceptionResponse.setMessage(
+                messageSource.getMessage("MESSAGE.REGISTRATION.ARGUMENTS.INVALID", null, Locale.ENGLISH));
         JSONObject exceptionHolder = new JSONObject();
         BindingResult exception = ex.getBindingResult();
         for (FieldError allError : exception.getFieldErrors()) {
@@ -94,6 +93,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ApiKeyGenerationException.class)
     public ResponseEntity<AppResponse> handelApiKeyException(ApiKeyGenerationException ex) {
         log.info("Key generation failed, exception occurred....");
+        AppResponse exceptionResponse = new AppResponse();
+        exceptionResponse.setCode(Constants.RESPONSE_CODE.FAILED);
+        exceptionResponse.setMessage(ex.getMessage());
+        exceptionResponse.setDetails(Collections.emptyList());
+        return new ResponseEntity<>(exceptionResponse, new HttpHeaders(), HttpStatus.OK);
+    }
+
+    @ExceptionHandler(NoDataFoundException.class)
+    public ResponseEntity<AppResponse> handelNoDataFoundException(NoDataFoundException ex) {
+        log.info("No data found exception occurred....");
         AppResponse exceptionResponse = new AppResponse();
         exceptionResponse.setCode(Constants.RESPONSE_CODE.FAILED);
         exceptionResponse.setMessage(ex.getMessage());

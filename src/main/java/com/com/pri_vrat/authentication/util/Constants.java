@@ -49,4 +49,8 @@ public class Constants {
     public static class CustomHeader {
         public static final String X_ACCESS_KEY = "x-access-key";
     }
+
+    public static class SERVICE_ROLE {
+        public static final String INTERNAL_SCHEDULER = "internal-scheduler-service";
+    }
 }

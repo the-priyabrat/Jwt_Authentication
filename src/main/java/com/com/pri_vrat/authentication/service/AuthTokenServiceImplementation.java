@@ -5,6 +5,7 @@ import com.com.pri_vrat.authentication.config.TenantContext;
 import com.com.pri_vrat.authentication.dto.AppResponse;
 import com.com.pri_vrat.authentication.dto.Auth;
 import com.com.pri_vrat.authentication.dto.AuthRequestDto;
+import com.com.pri_vrat.authentication.dto.ClientAuthRequest;
 import com.com.pri_vrat.authentication.entity.UserAuth;
 import com.com.pri_vrat.authentication.exception.customException.AuthenticationException;
 import com.com.pri_vrat.authentication.repository.AuthUserRepository;
@@ -79,6 +80,37 @@ public class AuthTokenServiceImplementation implements AuthTokenService {
             throw e;
         } catch (Exception e) {
             log.info("Exception occurred in auth token service at login...{}", e.getMessage());
+            throw e;
+        }
+    }
+
+    @Override
+    public AppResponse clientLogin(ClientAuthRequest clientAuthRequest) {
+        try{
+            System.out.println("triggered......");
+            MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
+            requestBody.add(Constants.KEYCLOAK.CLIENT_ID, clientAuthRequest.getClientId());
+            requestBody.add(Constants.KEYCLOAK.REALM, realm);
+            requestBody.add(Constants.KEYCLOAK.CLIENT_SECRET, clientAuthRequest.getClientSecret());
+            requestBody.add(Constants.KEYCLOAK.GRANT_TYPE, OAuth2Constants.CLIENT_CREDENTIALS);
+            HttpHeaders header = new HttpHeaders();
+            header.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            HttpEntity<?> requestEntity = new HttpEntity<>(requestBody, header);
+            ResponseEntity<JSONObject> response =
+                    restTemplate.exchange(tokenEndPoint, HttpMethod.POST, requestEntity, JSONObject.class);
+            if(!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new AuthenticationException("Invalid client grant details");
+            }
+            return AppResponse.builder()
+                    .code("SUCCESS")
+                    .message("Successfully authenticated")
+                    .details(List.of(response.getBody()))
+                    .build();
+        } catch (AuthenticationException ex) {
+            log.error("Client authentication failed for message {}", ex.getMessage());
+            throw ex;
+        } catch (Exception e) {
+            log.error("Exception occurred at client login {}",e.getMessage());
             throw e;
         }
     }

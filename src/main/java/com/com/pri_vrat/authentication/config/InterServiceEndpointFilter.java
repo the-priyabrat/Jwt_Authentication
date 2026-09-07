@@ -34,7 +34,8 @@ public class InterServiceEndpointFilter extends OncePerRequestFilter {
         AntPathMatcher antPathMatcher = new AntPathMatcher();
         boolean matches =
                 antPathMatcher
-                        .match("/authentication-service/userAuth/api/apiKeyDetails/**", requestURI);
+                        .match("/authentication-service/userAuth/api/apiKeyDetails/**", requestURI) || antPathMatcher
+                        .match("/authentication-service/apiKey/getDetails/apikies", requestURI);
         //the next public endpoints to be added by || like || antMatcher.matches(example/get/**)
         if (matches) {
             final String requestAccessKey = request.getHeader(Constants.CustomHeader.X_ACCESS_KEY);
